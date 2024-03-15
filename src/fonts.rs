@@ -2,7 +2,7 @@
 
 use std::error::Error;
 
-use turing_screen::framebuffer::Framebuffer;
+use turing_screen::colors;
 use turing_screen::{Coord, Image, Rect, Rgba};
 
 macro_rules! set_min {
@@ -36,13 +36,13 @@ impl Font<'_> {
 }
 
 pub fn draw_text(
-    fb: &mut Framebuffer,
+    background: &Image,
     font: &Font,
     size: f32,
     color: Rgba,
     pos: &Coord,
     msg: &str,
-) -> Rect {
+) -> (Image, Rect) {
     let scale = rusttype::Scale { x: size, y: size };
 
     // From rusttype ascii.rs:
@@ -60,9 +60,11 @@ pub fn draw_text(
         .iter()
         .rev()
         .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
-        .next() .unwrap_or(0.0) .ceil() as usize; // the text image
-    let text_img = &mut Image {
-        buffer: &mut vec![turing_screen::TRANSPARENT; w * h],
+        .next()
+        .unwrap_or(0.0)
+        .ceil() as usize; // the text image
+    let mut text_img = Image {
+        buffer: vec![colors::TRANSPARENT; w * h],
         width: w,
         height: h,
     };
@@ -97,8 +99,8 @@ pub fn draw_text(
     log::debug!("draw text: '{}' {}, bounding box: {}", msg, pos, bb_rect);
 
     // Blend rasterized text to intermediate buffer
-    fb.blend_image(text_img, &bb_rect, &pos);
+    text_img.blend_to_background(&bb_rect, pos, background);
 
-    // The text bounding box in screen coordinates
-    Rect::new(pos.x, pos.y, bb_rect.w, bb_rect.h)
+    // The text image and crop coordinates
+    (text_img, bb_rect)
 }

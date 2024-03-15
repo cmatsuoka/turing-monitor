@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::sync::mpsc;
 
-use turing_screen::framebuffer::Framebuffer;
 use turing_screen::{Coord, Image, Rect, Rgba, Screen};
 
 use crate::fonts;
@@ -16,7 +15,7 @@ pub struct Renderer<'a> {
     widgets: HashMap<u64, themes::DeviceMeter>,
     font: HashMap<String, fonts::Font<'a>>,
     scr: Box<dyn Screen>,
-    fb: Framebuffer,
+    bg: Image,
 }
 
 impl Renderer<'_> {
@@ -48,30 +47,30 @@ impl Renderer<'_> {
         let (width, height) = scr.screen_size();
 
         log::debug!("framebuffer size: {width}x{height}");
-        let fb = Framebuffer::new(width, height);
+        let bg = Image::new(width, height);
 
         let renderer = Self {
             ch,
             widgets,
             font: font_map,
             scr,
-            fb,
+            bg,
         };
 
         Ok(renderer)
     }
 
     pub fn start(&mut self) -> Res<()> {
-        let mut bitmap = lodepng::decode32_file("res/themes/Digital_cpu/background_digital.png")?;
-        let bg = Image {
-            buffer: &mut bitmap.buffer,
+        let bitmap = lodepng::decode32_file("res/themes/Digital_cpu/background_digital.png")?;
+        let mut bg = Image {
+            buffer: bitmap.buffer,
             width: bitmap.width,
             height: bitmap.height,
         };
 
         let rect = Rect::new(0, 0, bg.width, bg.height);
-        self.fb.copy_image(&bg, &rect, &Coord::new(0, 0));
-        self.fb.render_on(&mut self.scr, &rect)?;
+        bg.render_on(&mut self.scr, &rect, &Coord::new(0, 0));
+        self.bg.copy_image(&bg, &rect, &Coord::new(0, 0));
 
         loop {
             match self.ch.recv() {
@@ -82,7 +81,6 @@ impl Renderer<'_> {
                     log::warn!("renderer receive error: {err}");
                 }
             }
-            self.fb.copy_image(&bg, &rect, &Coord::new(0, 0));
         }
     }
 
@@ -117,9 +115,9 @@ impl Renderer<'_> {
         let color = Rgba::new(0xff, 0, 0, 0xff); // text.font_color;
         let pos = Coord::new(text.x as usize, text.y as usize);
 
-        let rect = fonts::draw_text(&mut self.fb, &font, size, color, &pos, &s);
+        let (text_img, bb_rect) = fonts::draw_text(&self.bg, font, size, color, &pos, &s);
         let scr = &mut self.scr;
-        self.fb.render_on(scr, &rect)?;
+        text_img.render_on(scr, &bb_rect, &pos)?;
 
         Ok(())
     }
