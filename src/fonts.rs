@@ -60,19 +60,14 @@ pub fn draw_text(
         .iter()
         .rev()
         .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
-        .next()
-        .unwrap_or(0.0)
-        .ceil() as usize;
-
-    // the text image
+        .next() .unwrap_or(0.0) .ceil() as usize; // the text image
     let text_img = &mut Image {
         buffer: &mut vec![turing_screen::TRANSPARENT; w * h],
         width: w,
         height: h,
     };
-    // text bounding box in text image coordinates
-    let (mut min_x, mut min_y) = (w as i32, h as i32);
-    let (mut max_x, mut max_y) = (0i32, 0i32);
+    // text bounding box in text image coordinates to adjust vertical alignment
+    let (mut min_y, mut max_y) = (h as i32, 0i32);
 
     log::debug!("text image size: {}x{}", w, h);
 
@@ -91,22 +86,19 @@ pub fn draw_text(
                     bg.a = (255.0 * v) as u8;
                 }
             });
-            set_min!(min_x, bb.min.x);
             set_min!(min_y, bb.min.y);
-            set_max!(max_x, bb.max.x);
             set_max!(max_y, bb.max.y);
         }
     }
 
-    let (min_x, min_y) = (min_x as usize, min_y as usize);
-    let (max_x, max_y) = (max_x as usize, max_y as usize);
+    let (min_y, max_y) = (min_y as usize, max_y as usize);
 
-    let bb_rect = Rect::new(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1);
+    let bb_rect = Rect::new(0, min_y, w, max_y - min_y + 1);
     log::debug!("draw text: '{}' {}, bounding box: {}", msg, pos, bb_rect);
 
     // Blend rasterized text to intermediate buffer
-    fb.blend_image(text_img, &bb_rect, pos);
+    fb.blend_image(text_img, &bb_rect, &pos);
 
     // The text bounding box in screen coordinates
-    Rect::new(pos.x, pos.y, w, h)
+    Rect::new(pos.x, pos.y, bb_rect.w, bb_rect.h)
 }
