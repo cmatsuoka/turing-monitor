@@ -7,7 +7,6 @@ use std::thread;
 use std::time::Duration;
 
 use clap::Parser;
-use simple_logger::SimpleLogger;
 use xxhash_rust::const_xxh3::xxh3_64 as const_xxh3;
 
 use crate::cpu::*;
@@ -16,6 +15,7 @@ use crate::render::Renderer;
 use crate::scheduler::{Scheduler, Task};
 
 mod cpu;
+mod fonts;
 mod meter;
 mod render;
 mod scheduler;
@@ -39,6 +39,10 @@ struct Args {
     #[arg(short, long, value_name = "device", default_value_t = String::from("AUTO"))]
     port: String,
 
+    /// Enable debug messages
+    #[arg(short, long)]
+    debug: bool,
+
     #[arg(value_name = "theme_name")]
     theme: String,
 }
@@ -56,15 +60,18 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<(), Box<dyn Error>> {
-    SimpleLogger::new().init()?;
+    let level = if args.debug {
+        log::Level::Debug
+    } else {
+        log::Level::Info
+    };
+    simple_logger::init_with_level(level)?;
 
     let refresh_period = Duration::from_secs(args.refresh);
     let theme_name = args.theme;
     let theme = themes::load(&theme_name)?;
 
     log::info!("using theme: {theme_name}");
-
-    let _scr = turing_screen::new("AUTO")?;
 
     let mut measurements = Measurements::new();
     let configs = themes::get_meter_list(&theme);
@@ -77,7 +84,13 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let (tx, rx) = mpsc::sync_channel(1);
     let renderer_configs = configs.clone();
     thread::spawn(move || {
-        let mut renderer = Renderer::new(rx, renderer_configs);
+        let mut renderer = match Renderer::new(rx, renderer_configs) {
+            Ok(r) => r,
+            Err(err) => {
+                log::error!("error: {err}");
+                return;
+            }
+        };
         renderer.start();
     });
 
