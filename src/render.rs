@@ -68,9 +68,8 @@ impl Renderer<'_> {
             height: bitmap.height,
         };
 
-        let rect = Rect::new(0, 0, bg.width, bg.height);
-        bg.render_on(&mut self.scr, &rect, &Coord::new(0, 0));
-        self.bg.copy_image(&bg, &rect, &Coord::new(0, 0));
+        bg.render_on(&mut self.scr, &bg.full(), &Coord::new(0, 0))?;
+        self.bg.copy_image(&bg, &bg.full(), &Coord::new(0, 0));
 
         loop {
             match self.ch.recv() {
@@ -115,9 +114,8 @@ impl Renderer<'_> {
         let color = Rgba::new(0xff, 0, 0, 0xff); // text.font_color;
         let pos = Coord::new(text.x as usize, text.y as usize);
 
-        let (text_img, bb_rect) = fonts::draw_text(&self.bg, font, size, color, &pos, &s);
-        let scr = &mut self.scr;
-        text_img.render_on(scr, &bb_rect, &pos)?;
+        let (text_img, bb_rect) = font.draw(&self.bg, size, color, &pos, &s);
+        text_img.render_on(&mut self.scr, &bb_rect, &pos)?;
 
         Ok(())
     }
