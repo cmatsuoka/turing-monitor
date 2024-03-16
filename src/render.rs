@@ -3,9 +3,8 @@
 use std::collections::HashMap;
 use std::sync::mpsc;
 
-use turing_screen::{Coord, Image, Rect, Rgba, Screen};
+use turing_screen::{Coord, Font, Image, Rect, Rgba, Screen};
 
-use crate::fonts;
 use crate::meter::{Measurements, MeterConfig};
 use crate::themes;
 use crate::Res;
@@ -13,7 +12,7 @@ use crate::Res;
 pub struct Renderer<'a> {
     ch: mpsc::Receiver<Measurements>,
     widgets: HashMap<u64, themes::DeviceMeter>,
-    font: HashMap<String, fonts::Font<'a>>,
+    font: HashMap<String, Font<'a>>,
     scr: Box<dyn Screen>,
     bg: Image,
 }
@@ -21,7 +20,7 @@ pub struct Renderer<'a> {
 impl Renderer<'_> {
     pub fn new(ch: mpsc::Receiver<Measurements>, configs: Vec<MeterConfig>) -> Res<Self> {
         let mut widgets = HashMap::<u64, themes::DeviceMeter>::new();
-        let mut font_map = HashMap::<String, fonts::Font>::new();
+        let mut font_map = HashMap::<String, Font>::new();
         for cfg in configs {
             widgets.insert(cfg.id, cfg.layout.clone());
             if let Some(text) = cfg.layout.text {
@@ -34,7 +33,7 @@ impl Renderer<'_> {
 
                 log::info!("load font {}", font_path);
                 let data = std::fs::read(&font_path)?;
-                let font = fonts::Font::from_data(data)?;
+                let font = Font::from_data(data)?;
                 font_map.insert(text.font, font);
             }
         }

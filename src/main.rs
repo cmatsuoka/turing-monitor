@@ -15,7 +15,6 @@ use crate::render::Renderer;
 use crate::scheduler::{Scheduler, Task};
 
 mod cpu;
-mod fonts;
 mod meter;
 mod render;
 mod scheduler;

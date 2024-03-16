@@ -925,7 +925,6 @@ dependencies = [
  "lodepng",
  "log",
  "psutil",
- "rusttype",
  "serde",
  "serde_yaml",
  "simple_logger",
@@ -939,6 +938,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "rgb",
+ "rusttype",
  "serialport",
  "simple_logger",
 ]
